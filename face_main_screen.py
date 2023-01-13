@@ -10,6 +10,7 @@ import face_recognition
 from keras.preprocessing.image import img_to_array
 from keras.models import load_model
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 
 class AnotherWindow(QWidget):
     def __init__(self, imagePath):
@@ -48,17 +49,19 @@ class Ui_MainWindow(QtWidgets.QWidget):
         # 人臉檢測
         self.detector = dlib.get_frontal_face_detector()
         self.predictor = dlib.shape_predictor('./shape_predictor_68_face_landmarks.dat')
+        self.net = cv2.dnn.readNetFromCaffe("deploy.prototxt", "res10_300x300_ssd_iter_140000.caffemodel")
+
         # 情緒檢測器
         self.expression_detector = cv2.CascadeClassifier('./haarcascade_frontalface_alt2.xml')
         self.expression_model = load_model('epoch_30.hdf5')
-        self.EMOTIONS = ["angry", "scared", "happy", "sad", "surprised", "neutral"]
-
+        self.EMOTIONS = ["生氣", "驚嚇", "開心", "傷心", "驚訝", "普通"]
+        self.EMOJI = ['./angry_emoji.png', './scared_emoji.png', './happy_emoji.png', './sad_emoji.png', './surprised_emoji.png', './neutral_emoji.png']
         self.window1 = AnotherWindow('./camera.png')
         self.window2 = AnotherWindow('./face.png')
         self.window3 = AnotherWindow('./landmark.png')
         self.window4 = AnotherWindow('./expression.png')
 
-        
+
     def set_ui(self):
         '''
         建立window --> window = QWidget() 
@@ -83,7 +86,7 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.button_show_camera_code = QtWidgets.QPushButton(u'攝像頭程式')
         self.button_show_face_code = QtWidgets.QPushButton(u'人臉檢測程式')
         self.button_show_landmark_code = QtWidgets.QPushButton(u'關鍵點程式')
-        self.button_show_expression_code= QtWidgets.QPushButton(u'表情檢測程式')
+        self.button_show_expression_code= QtWidgets.QPushButton(u'情緒檢測程式')
 
         # button颜色修改
         button_color = [self.button_open_camera, self.button_close_camera, self.button_open_face, self.button_open_landmark, self.button_show_camera_code, \
@@ -193,15 +196,30 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.show_camera_panel.setPixmap(QtGui.QPixmap.fromImage(showImage))
 
     def face_detector(self):
-        # self.cap.open(self.CAM_NUM)
         _, self.frame = self.cap.read()     # --> frame: (height, width, channel)
         show = cv2.resize(self.frame, (800, 600))  # 顯示在camera panel中的圖片大小, 想要的尺寸(width, height)
          # opencv默認的BGR要轉換成RGB
         show = cv2.cvtColor(show, cv2.COLOR_BGR2RGB)  # --> (600, 800, 3)
         # showImage return 一個object.    QtGui.QImage(data, width, height, format)
-        boxes = face_recognition.face_locations(show, model = 'hog')
-        for (top, right, bottom, left) in boxes:
-            cv2.rectangle(show, (left, top), (right + 17, bottom + 17), (0, 255, 0), 2)
+        # boxes = face_recognition.face_locations(show, model = 'hog')
+        # for (top, right, bottom, left) in boxes:
+        #     cv2.rectangle(show, (left, top), (right + 17, bottom + 17), (0, 255, 0), 2)
+
+        h, w = show.shape[:2]
+        blob = cv2.dnn.blobFromImage(cv2.resize(show, (300, 300)), 1.0,(300, 300), (104.0, 177.0, 123.0))
+        self.net.setInput(blob)
+        detections = self.net.forward()
+        
+        for i in range(0, detections.shape[2]):
+            confidence = detections[0, 0, i, 2]
+            if confidence < 0.5:
+                continue
+            box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+            (startX, startY, endX, endY) = box.astype("int")
+            cv2.rectangle(show, (startX, startY), (endX, endY), (0, 255, 0), 2)
+        # faceRects = self.detector(show, 1)
+        # for _, face in enumerate(faceRects):
+        #     cv2.rectangle(show, (face.left(), face.top()), (face.right() + 17, face.bottom() + 17), (0, 255, 0), 2)
         showImage = QtGui.QImage(show.data, show.shape[1], show.shape[0], QtGui.QImage.Format_RGB888)
         self.show_camera_panel.setPixmap(QtGui.QPixmap.fromImage(showImage))
 
@@ -230,13 +248,31 @@ class Ui_MainWindow(QtWidgets.QWidget):
         show_gray = cv2.cvtColor(show, cv2.COLOR_BGR2GRAY)
         # canvas = np.zeros((220, 300, 3), dtype = 'uint8') # 用來畫情緒可能的分佈
         # frameClone = show.copy()
-        rects = self.expression_detector.detectMultiScale(show_gray, scaleFactor=1.2, minNeighbors=5, minSize=(30, 30),
-										flags=cv2.CASCADE_SCALE_IMAGE)
+        # rects = self.expression_detector.detectMultiScale(show_gray, scaleFactor=1.2, minNeighbors=5, minSize=(30, 30),
+		# 								flags=cv2.CASCADE_SCALE_IMAGE)
+        # print(rects)
+        h, w = show.shape[:2]
+        blob = cv2.dnn.blobFromImage(cv2.resize(show, (300, 300)), 1.0,(300, 300), (104.0, 177.0, 123.0))
+        self.net.setInput(blob)
+        detections = self.net.forward()
+        
+        for i in range(0, detections.shape[2]):
+            confidence = detections[0, 0, i, 2]
+            if confidence < 0.5:
+                continue
+            box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+            (startX, startY, endX, endY) = box.astype("int")
+            # cv2.rectangle(show, (startX, startY), (endX, endY), (0, 255, 0), 2)
 
-        if len(rects) > 0:
-            rect = sorted(rects, reverse=True, key=lambda x: (x[2] - x[0]) * (x[3] - x[1]))[0] # 最大那张脸的boundary
-            (X, Y, W, H) = rect
+        # rects = face_recognition.face_locations(show_rgb, model = 'hog')
+        # for (top, right, bottom, left) in rects:
+            # cv2.rectangle(show, (left, top), (right + 17, bottom + 17), (0, 255, 0), 2)
 
+        # if len(rects) > 0:
+        #     rect = sorted(rects, reverse=True, key=lambda x: (x[2] - x[0]) * (x[3] - x[1]))[0]
+            # roi = show_gray[top: bottom, left: right]
+            # roi = show_gray[Y:Y + H, X:X + W]
+            X, Y, W, H = startX - 5, startY, (endX - startX + 5), (endY - startY)
             roi = show_gray[Y:Y + H, X:X + W]
             roi = cv2.resize(roi, (48, 48))
             roi = roi.astype("float") / 255.0
@@ -246,16 +282,35 @@ class Ui_MainWindow(QtWidgets.QWidget):
             # 把roi输入model来预测
             preds = self.expression_model.predict(roi)[0]
             label = self.EMOTIONS[preds.argmax()]
-
+            emoji = self.EMOJI[preds.argmax()]
         #     # for (_, (emotion, prob)) in enumerate(zip(self.EMOTIONS, preds)):
         #     #     text = "{}: {:.2f}%".format(emotion, prob * 100)
-
         #         # w = int(prob * 300)
         #         # cv2.rectangle(canvas, (5, (i * 35) + 5), (w, (i * 35) + 35), (0, 0, 255), -1)
         #         # cv2.putText(canvas, text, (10, (i * 35) + 23), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 2)
+            
+            img = Image.fromarray(show)
+            draw = ImageDraw.Draw(img)
+            fontText = ImageFont.truetype('font/simsun.ttc', size = 30, encoding = 'utf-8')
+            draw.text((X, Y - 36), label, (0, 255, 0), stroke_width = 1, font = fontText)
+            img = np.array(img)
+            show_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            # cv2.putText(show_rgb, label, (X, Y - 17), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 2)
+            cv2.rectangle(show_rgb, (X, Y), (X + W, Y + H + 18), (0, 255, 0), 2)
+            
+            emoji_image = cv2.imread(emoji, -1)
+            emoji_image = cv2.cvtColor(emoji_image, cv2.COLOR_BGR2RGBA)
+            emoji_image = cv2.resize(emoji_image, (100, 100))
+            alpha_emoji = emoji_image[:, :, 3] / 255.0
+            alpha_show_rgb = 1.0 - alpha_emoji
 
-            cv2.putText(show_rgb, label, (X, Y - 17), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 2)
-            cv2.rectangle(show_rgb, (X, Y), (X + W, Y + H),	(0, 255, 0), 2)
+            emoji_start  = X - 110
+            emoji_end = X - 10
+            if X - 110 < 0:
+                emoji_start = X + W + 10
+                emoji_end = X + W + 110
+            for c in range(0, 3):
+                show_rgb[Y:(Y+100), emoji_start:emoji_end, c] = (alpha_emoji * emoji_image[:, :, c] + alpha_show_rgb * show_rgb[Y:(Y+100), emoji_start:emoji_end, c])
             
             showImage = QtGui.QImage(show_rgb.data, show_rgb.shape[1], show_rgb.shape[0], QtGui.QImage.Format_RGB888)
             self.show_camera_panel.setPixmap(QtGui.QPixmap.fromImage(showImage)) 
