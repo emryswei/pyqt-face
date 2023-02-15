@@ -4,13 +4,60 @@ import cv2
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from PyQt5.QtGui import QPalette, QPixmap
+from PyQt5.QtGui import QPalette, QPixmap, QFont
 import dlib
 import face_recognition
 from keras.preprocessing.image import img_to_array
 from keras.models import load_model
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+
+class ShowMainWindow(QtWidgets.QWidget):
+    switch_window = QtCore.pyqtSignal(str)
+
+    def __init__(self):
+        QtWidgets.QWidget.__init__(self)
+        self.setWindowTitle(u'主銀幕')
+        self.layout_main = QtWidgets.QVBoxLayout()
+        self.button_func_show = QtWidgets.QPushButton(u'進入演示模式')
+        self.button_code_show = QtWidgets.QPushButton(u'進入查看程式模式')
+        self.buttons = [self.button_func_show, self.button_code_show]
+        # 設置window的開始位置和尺寸
+        self.setGeometry(350, 150, 600, 600)
+        
+        # 添加button樣式為expanding自適應
+        self.button_adaptive = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.button_func_show.setSizePolicy(self.button_adaptive)
+        self.button_code_show.setSizePolicy(self.button_adaptive)
+
+        # 設置button text樣式
+        for button in self.buttons:
+            button.setFont(QFont('Times', 48))
+        # 設置button樣式
+        for button in self.buttons:
+            button.setStyleSheet("QPushButton{color:black}"
+                                           "QPushButton:hover{color:red}"
+                                           "QPushButton{background-color:rgb(229,255,204)}"
+                                           "QpushButton{border:5px}"
+                                           "QPushButton{padding:2px 4px}")
+        
+        # 在layout_main上添加button
+        self.layout_main.addWidget(self.button_func_show)
+        self.layout_main.addSpacing(10)
+        self.layout_main.addWidget(self.button_code_show)
+        
+        # 應用上面設置的layout
+        self.setLayout(self.layout_main)
+
+    def switch(self):
+        pass
+
+
+class ShowFunctionWindow(QtWidgets.QWidget):
+    pass
+
+class ShowCodeWindow(QtWidgets.QWidget):
+    pass
 
 class AnotherWindow(QWidget):
     def __init__(self, imagePath):
@@ -23,13 +70,15 @@ class AnotherWindow(QWidget):
 
         self.mypixmap = QPixmap()
         self.mypixmap.load(self.imagePath)
-        self.mypixmap = self.mypixmap.scaled(850, 620, Qt.KeepAspectRatio)
+        # self.mypixmap.setDevicePixelRatio(1)
+        self.mypixmap = self.mypixmap.scaled(1000, 700, Qt.KeepAspectRatio)
 
         if self.mypixmap.isNull():
             print('Image not found')
             return
         else:
             self.label.setPixmap(self.mypixmap)
+            # self.resize(850, 620)
 
 
 class Ui_MainWindow(QtWidgets.QWidget):
@@ -55,11 +104,11 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.expression_detector = cv2.CascadeClassifier('./haarcascade_frontalface_alt2.xml')
         self.expression_model = load_model('epoch_30.hdf5')
         self.EMOTIONS = ["生氣", "驚嚇", "開心", "傷心", "驚訝", "普通"]
-        self.EMOJI = ['./angry_emoji.png', './scared_emoji.png', './happy_emoji.png', './sad_emoji.png', './surprised_emoji.png', './neutral_emoji.png']
-        self.window1 = AnotherWindow('./camera.png')
-        self.window2 = AnotherWindow('./face.png')
-        self.window3 = AnotherWindow('./landmark.png')
-        self.window4 = AnotherWindow('./expression.png')
+        self.EMOJI = ['emojis/angry_emoji.png', 'emojis/scared_emoji.png', 'emojis/happy_emoji.png', 'emojis/sad_emoji.png', 'emojis/surprised_emoji.png', 'emojis/neutral_emoji.png']
+        self.window1 = AnotherWindow('codes/camera.png')
+        self.window2 = AnotherWindow('codes/face.png')
+        self.window3 = AnotherWindow('codes/landmark.png')
+        self.window4 = AnotherWindow('codes/expression.png')
 
 
     def set_ui(self):
@@ -72,6 +121,13 @@ class Ui_MainWindow(QtWidgets.QWidget):
         # self.__layout_main = QtWidgets.QHBoxLayout()  # QHBoxLayout水平佈局，按照從左到右的順序排列
         # self.__layout_buttons = QtWidgets.QHBoxLayout()
         
+        # main horizontal layout
+        self.__layout_main_horizontal = QtWidgets.QVBoxLayout()
+        self.__layout_main_horizontal_buttons = QtWidgets.QHBoxLayout()
+        self.button_func_show = QtWidgets.QPushButton(u'進入演示模式')
+        self.button_code_show = QtWidgets.QPushButton(u'進入查看程式模式')
+
+
         # main vertical layout
         self.__layout_main = QtWidgets.QVBoxLayout()
         self.__layout_buttons = QtWidgets.QHBoxLayout()
@@ -90,7 +146,8 @@ class Ui_MainWindow(QtWidgets.QWidget):
 
         # button颜色修改
         button_color = [self.button_open_camera, self.button_close_camera, self.button_open_face, self.button_open_landmark, self.button_show_camera_code, \
-                        self.button_show_face_code, self.button_show_landmark_code, self.button_show_expression_code, self.button_open_expression
+                        self.button_show_face_code, self.button_show_landmark_code, self.button_show_expression_code, self.button_open_expression,\
+                        self.button_func_show, self.button_code_show,
                     ] 
         button_color_count = len(button_color)
         for i in range(button_color_count):
@@ -102,10 +159,6 @@ class Ui_MainWindow(QtWidgets.QWidget):
         # 設置button最小高度
         for button in button_color:
             button.setMinimumHeight(50)
-        # self.button_open_camera.setMinimumHeight(50)
-        # self.button_close_camera.setMinimumHeight(50)
-        # self.button_open_face.setMinimumHeight(50)
-        # self.button_open_landmark.setMinimumHeight(50)
 
         # move(x, y) --> 移動介面到指定位置。 (0, 0)位於最左上角, 往右和往下為正
         self.move(350, 150)
@@ -120,6 +173,12 @@ class Ui_MainWindow(QtWidgets.QWidget):
         palette.setColor(QPalette.Window, Qt.black)
         self.show_camera_panel.setPalette(palette)
         self.show_camera_panel.setAutoFillBackground(True)
+        # 把主功能button添加到__layout_main_horizontal layout
+        self.__layout_main_horizontal.addLayout(self.__layout_main_horizontal_buttons)
+        self.__layout_main_horizontal.addWidget(self.show_camera_panel)
+        # 把進入展示和查看code的入口button添加到__layout_main_horizontal_buttons layout
+        self.__layout_main_horizontal_buttons.addWidget(self.button_func_show)
+        self.__layout_main_horizontal_buttons.addWidget(self.button_code_show)
         # 第一行button添加到button layout中
         self.__layout_buttons.addWidget(self.button_open_camera)
         self.__layout_buttons.addWidget(self.button_open_face)
@@ -137,7 +196,8 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.__layout_main.addWidget(self.show_camera_panel)
        
         self.setWindowTitle(u'主程序畫面')
-        self.setLayout(self.__layout_main)
+        # self.setLayout(self.__layout_main)
+        self.setLayout(self.__layout_main_horizontal)
         # self.label_move.raise_()      # raise_()把該widget置於最上層
 
     def slot_init(self):
@@ -246,11 +306,8 @@ class Ui_MainWindow(QtWidgets.QWidget):
         show = cv2.resize(self.frame, (800, 600))
         show_rgb = cv2.cvtColor(show, cv2.COLOR_BGR2RGB)
         show_gray = cv2.cvtColor(show, cv2.COLOR_BGR2GRAY)
-        # canvas = np.zeros((220, 300, 3), dtype = 'uint8') # 用來畫情緒可能的分佈
-        # frameClone = show.copy()
         # rects = self.expression_detector.detectMultiScale(show_gray, scaleFactor=1.2, minNeighbors=5, minSize=(30, 30),
 		# 								flags=cv2.CASCADE_SCALE_IMAGE)
-        # print(rects)
         h, w = show.shape[:2]
         blob = cv2.dnn.blobFromImage(cv2.resize(show, (300, 300)), 1.0,(300, 300), (104.0, 177.0, 123.0))
         self.net.setInput(blob)
@@ -283,11 +340,6 @@ class Ui_MainWindow(QtWidgets.QWidget):
             preds = self.expression_model.predict(roi)[0]
             label = self.EMOTIONS[preds.argmax()]
             emoji = self.EMOJI[preds.argmax()]
-        #     # for (_, (emotion, prob)) in enumerate(zip(self.EMOTIONS, preds)):
-        #     #     text = "{}: {:.2f}%".format(emotion, prob * 100)
-        #         # w = int(prob * 300)
-        #         # cv2.rectangle(canvas, (5, (i * 35) + 5), (w, (i * 35) + 35), (0, 0, 255), -1)
-        #         # cv2.putText(canvas, text, (10, (i * 35) + 23), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 2)
             
             img = Image.fromarray(show)
             draw = ImageDraw.Draw(img)
@@ -358,8 +410,19 @@ class Ui_MainWindow(QtWidgets.QWidget):
             self.window4.show()
 
 
+
+class Controller:
+    def __init__(self):
+        pass
+
+    def show_main(self):
+        self.window = ShowMainWindow()
+        self.window.switch_window.connect(self.window)
+        self.window.show()
+
 if __name__ == '__main__':
     App = QApplication(sys.argv)
-    window = Ui_MainWindow()
+    # window = Ui_MainWindow()
+    window = ShowMainWindow()
     window.show()
     sys.exit(App.exec_())
