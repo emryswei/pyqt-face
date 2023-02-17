@@ -4,7 +4,7 @@ import cv2
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from PyQt5.QtGui import QPalette, QPixmap, QFont
+from PyQt5.QtGui import *
 import dlib
 import face_recognition
 from keras.preprocessing.image import img_to_array
@@ -21,7 +21,7 @@ class ShowMainWindow(QtWidgets.QWidget):
         self.setWindowTitle(u'主程式畫面')
         self.layout_main = QtWidgets.QVBoxLayout()
         self.button_func_show = QtWidgets.QPushButton(u'進入演示模式')
-        self.button_code_show = QtWidgets.QPushButton(u'進入查看程式模式')
+        self.button_code_show = QtWidgets.QPushButton(u'進入拍照試玩模式')
         self.buttons = [self.button_func_show, self.button_code_show]
         # 設置window的開始位置和尺寸
         self.setGeometry(350, 150, 600, 600)
@@ -435,9 +435,9 @@ class TestCapture(QtWidgets.QWidget):
         self.layout = QVBoxLayout()
         self.button_open_camera = QPushButton(u'攝像頭功能')
         self.button_cap = QPushButton(u"拍照")
-        self.button_open = QPushButton(u"查看照片")
+        self.button_open_img = QPushButton(u"查看照片")
         # button颜色修改
-        self.buttons = [self.button_open_camera, self.button_cap, self.button_open]
+        self.buttons = [self.button_open_camera, self.button_cap, self.button_open_img]
         for button in self.buttons:
             button.setStyleSheet("QPushButton{color:black}"
                                 "QPushButton:hover{color:red}"
@@ -447,7 +447,7 @@ class TestCapture(QtWidgets.QWidget):
         # 設置button最小高度
         self.button_open_camera.setMinimumHeight(50)
         self.button_cap.setMinimumHeight(50)
-        self.button_open.setMinimumHeight(50)
+        self.button_open_img.setMinimumHeight(50)
 
         # move(x, y) --> 移動介面到指定位置。 (0, 0)位於最左上角, 往右和往下為正
         self.move(350, 150)
@@ -467,12 +467,11 @@ class TestCapture(QtWidgets.QWidget):
         self.layout.addWidget(self.show_camera_panel)
         self.layout.addWidget(self.button_open_camera)
         self.layout.addWidget(self.button_cap)
-        self.layout.addWidget(self.button_open)
+        self.layout.addWidget(self.button_open_img)
 
         self.setWindowTitle(u'攝像頭捕捉畫面')
         self.setLayout(self.layout)
-        # self.label_move.raise_()      # raise_()把該widget置於最上層
-
+        
     def slot_init(self):
         # 建立打開攝像頭連接    
         self.button_open_camera.clicked.connect(self.button_click)      
@@ -480,8 +479,8 @@ class TestCapture(QtWidgets.QWidget):
 
         # 拍照功能
         self.button_cap.clicked.connect(self.cap_image)
-        self.button_open.clicked.connect(self.open_directory)
-
+        self.button_open_img.clicked.connect(self.open_directory)
+    # 開關攝像頭
     def button_click(self):
         timers = self.timer_camera
         if timers.isActive() == False:
@@ -499,6 +498,8 @@ class TestCapture(QtWidgets.QWidget):
 
     def cap_image(self):
         self.show_image.save('./captured/photo.png')
+        msg = QMessageBox(QMessageBox.Warning, "提示", '拍照成功')
+        msg.exec_()
 
     def open_directory(self):
         self.captured = CapturedImageSelect()
@@ -517,6 +518,16 @@ class TestCapture(QtWidgets.QWidget):
 class CapturedImageSelect(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()  
+
+        self.detector = dlib.get_frontal_face_detector()
+        self.predictor = dlib.shape_predictor('./shape_predictor_68_face_landmarks.dat')
+        self.net = cv2.dnn.readNetFromCaffe("deploy.prototxt", "res10_300x300_ssd_iter_140000.caffemodel")
+        # 情緒檢測器
+        self.expression_detector = cv2.CascadeClassifier('./haarcascade_frontalface_alt2.xml')
+        self.expression_model = load_model('epoch_30.hdf5')
+        self.EMOTIONS = ["生氣", "驚嚇", "開心", "傷心", "驚訝", "普通"]
+        self.EMOJI = ['emojis/angry_emoji.png', 'emojis/scared_emoji.png', 'emojis/happy_emoji.png', 'emojis/sad_emoji.png', 'emojis/surprised_emoji.png', 'emojis/neutral_emoji.png']
+        
         self.setWindowTitle("照片文件夾")
         self.move(200,200)
 
@@ -529,7 +540,7 @@ class CapturedImageSelect(QtWidgets.QWidget):
                                            "QPushButton{padding:2px 4px}")
         self.button.clicked.connect(self.open_image)
         self.panel = QLabel()
-        self.panel.setFixedSize(400, 400)    # 整個camera panel的尺寸大小
+        self.panel.setFixedSize(500, 500)    # 整個camera panel的尺寸大小
         palette = QPalette()
         palette.setColor(QPalette.Window, Qt.black)
         self.panel.setPalette(palette)
@@ -540,9 +551,71 @@ class CapturedImageSelect(QtWidgets.QWidget):
         self.setLayout(self.layout)
 
     def open_image(self):
-        QFileDialog.getOpenFileName(self,  "選擇文件","./captured", "All Files (*);;Image Files (*.png)") 
+        fname, _ = QFileDialog.getOpenFileName(self, '打開文件夾', './captured', "Image files (*.jpg *.png)")
+        self.img = cv2.imread(fname)
+        self.img = cv2.resize(self.img, (500, 500))
+        self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
+        showImage = QtGui.QImage(self.img.data, self.img.shape[1], self.img.shape[0], QtGui.QImage.Format_RGB888)
+        self.panel.setPixmap(QtGui.QPixmap.fromImage(showImage))
+        self.facial_expression(fname)
+
+    def facial_expression(self, filename = None): 
+        self.frame = cv2.imread(filename)
+        show = cv2.resize(self.frame, (500, 500))
+        show_rgb = cv2.cvtColor(show, cv2.COLOR_BGR2RGB)
+        show_gray = cv2.cvtColor(show, cv2.COLOR_BGR2GRAY)
+
+        h, w = show.shape[:2]
+        blob = cv2.dnn.blobFromImage(cv2.resize(show, (300, 300)), 1.0,(300, 300), (104.0, 177.0, 123.0))
+        self.net.setInput(blob)
+        detections = self.net.forward()
         
-   
+        for i in range(0, detections.shape[2]):
+            confidence = detections[0, 0, i, 2]
+            if confidence < 0.5:
+                continue
+            box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+            (startX, startY, endX, endY) = box.astype("int")
+
+            X, Y, W, H = startX - 5, startY, (endX - startX + 5), (endY - startY)
+            roi = show_gray[Y:Y + H, X:X + W]
+            roi = cv2.resize(roi, (48, 48))
+            roi = roi.astype("float") / 255.0
+            roi = img_to_array(roi)
+            roi = np.expand_dims(roi, axis=0)
+
+            preds = self.expression_model.predict(roi)[0]
+            label = self.EMOTIONS[preds.argmax()]
+            emoji = self.EMOJI[preds.argmax()]
+            
+            img = Image.fromarray(show)
+            draw = ImageDraw.Draw(img)
+            fontText = ImageFont.truetype('font/simsun.ttc', size = 30, encoding = 'utf-8')
+            draw.text((X, Y - 36), label, (0, 255, 0), stroke_width = 1, font = fontText)
+            img = np.array(img)
+            show_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            cv2.rectangle(show_rgb, (X, Y), (X + W, Y + H + 18), (0, 255, 0), 2)
+            
+            emoji_image = cv2.imread(emoji, -1)
+            emoji_image = cv2.cvtColor(emoji_image, cv2.COLOR_BGR2RGBA)
+            emoji_image = cv2.resize(emoji_image, (100, 100))
+            alpha_emoji = emoji_image[:, :, 3] / 255.0
+            alpha_show_rgb = 1.0 - alpha_emoji
+
+            emoji_start  = X - 110
+            emoji_end = X - 10
+            if X - 110 < 0:
+                emoji_start = X + W + 10
+                emoji_end = X + W + 110
+            for c in range(0, 3):
+                show_rgb[Y:(Y+100), emoji_start:emoji_end, c] = (alpha_emoji * emoji_image[:, :, c] + alpha_show_rgb * show_rgb[Y:(Y+100), emoji_start:emoji_end, c])
+            
+            showImage = QtGui.QImage(show_rgb.data, show_rgb.shape[1], show_rgb.shape[0], QtGui.QImage.Format_RGB888)
+            self.panel.setPixmap(QtGui.QPixmap.fromImage(showImage)) 
+            showImage.save('./captured/photo_expression.png')
+
+
+
 if __name__ == '__main__':
     App = QApplication(sys.argv)
     # window = Ui_MainWindow()
