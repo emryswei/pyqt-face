@@ -84,6 +84,7 @@ class Controller:
         self.test = TestCapture()
         self.main_window.close()
         self.test.show()
+        self.test.button_back.clicked.connect(lambda: {self.test.close(), self.main_window.show()})
 
 
 class AnotherWindow(QWidget):
@@ -432,12 +433,14 @@ class TestCapture(QtWidgets.QWidget):
         self.show_image = None
 
     def set_ui(self):
-        self.layout = QVBoxLayout()
+        self.main_layout = QVBoxLayout()
+        self.utilities_layout = QHBoxLayout()
         self.button_open_camera = QPushButton(u'攝像頭功能')
         self.button_cap = QPushButton(u"拍照")
         self.button_open_img = QPushButton(u"查看照片")
+        self.button_back = QPushButton(u"回到主頁")
         # button颜色修改
-        self.buttons = [self.button_open_camera, self.button_cap, self.button_open_img]
+        self.buttons = [self.button_open_camera, self.button_cap, self.button_open_img, self.button_back]
         for button in self.buttons:
             button.setStyleSheet("QPushButton{color:black}"
                                 "QPushButton:hover{color:red}"
@@ -445,10 +448,8 @@ class TestCapture(QtWidgets.QWidget):
                                 "QpushButton{border:2px}"
                                 "QPushButton{padding:2px 4px}")
         # 設置button最小高度
-        self.button_open_camera.setMinimumHeight(50)
-        self.button_cap.setMinimumHeight(50)
-        self.button_open_img.setMinimumHeight(50)
-
+        for button in self.buttons:
+            button.setMinimumHeight(50)
         # move(x, y) --> 移動介面到指定位置。 (0, 0)位於最左上角, 往右和往下為正
         self.move(350, 150)
 
@@ -464,11 +465,12 @@ class TestCapture(QtWidgets.QWidget):
         self.show_camera_panel.setAutoFillBackground(True)
 
         # 把button layout添加到main layout上
-        self.layout.addWidget(self.show_camera_panel)
-        self.layout.addWidget(self.button_open_camera)
-        self.layout.addWidget(self.button_cap)
-        self.layout.addWidget(self.button_open_img)
-
+        self.main_layout.addWidget(self.show_camera_panel)
+        self.main_layout.addLayout(self.utilities_layout)
+        self.utilities_layout.addWidget(self.button_open_camera)
+        self.utilities_layout.addWidget(self.button_cap)
+        self.utilities_layout.addWidget(self.button_open_img)
+        self.main_layout.addWidget(self.button_back)
         self.setWindowTitle(u'攝像頭捕捉畫面')
         self.setLayout(self.layout)
         
@@ -477,9 +479,9 @@ class TestCapture(QtWidgets.QWidget):
         self.button_open_camera.clicked.connect(self.button_click)      
         self.timer_camera.timeout.connect(self.show_camera)
 
-        # 拍照功能
         self.button_cap.clicked.connect(self.cap_image)
         self.button_open_img.clicked.connect(self.open_directory)
+
     # 開關攝像頭
     def button_click(self):
         timers = self.timer_camera
@@ -495,16 +497,16 @@ class TestCapture(QtWidgets.QWidget):
             timers.stop()
             self.cap.release()
             self.show_camera_panel.clear() 
-
+    # 拍照
     def cap_image(self):
         self.show_image.save('./captured/photo.png')
         msg = QMessageBox(QMessageBox.Warning, "提示", '拍照成功')
         msg.exec_()
-
+    # 打開照片文件夾
     def open_directory(self):
         self.captured = CapturedImageSelect()
         self.captured.show()
-
+    # 打開攝像頭
     def show_camera(self):
         _, self.frame = self.cap.read()     # --> frame: (height, width, channel)
         show = cv2.resize(self.frame, (800, 600))  # 顯示在camera panel中的圖片大小, 想要的尺寸(width, height)
@@ -514,6 +516,7 @@ class TestCapture(QtWidgets.QWidget):
         showImage = QtGui.QImage(show.data, show.shape[1], show.shape[0], QtGui.QImage.Format_RGB888)
         self.show_image = showImage
         self.show_camera_panel.setPixmap(QtGui.QPixmap.fromImage(showImage))
+
 
 class CapturedImageSelect(QtWidgets.QWidget):
     def __init__(self):
