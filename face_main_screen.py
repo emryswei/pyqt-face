@@ -7,7 +7,8 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import dlib
 import face_recognition
-from keras.preprocessing.image import img_to_array
+# from keras.preprocessing.image import img_to_array
+from tensorflow.keras.utils import img_to_array
 from keras.models import load_model
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -55,12 +56,6 @@ class ShowMainWindow(QtWidgets.QWidget):
     def switch_code(self):
         self.switch_window_code.emit()
 
-class ShowFunctionWindow(QtWidgets.QWidget):
-    pass
-
-class ShowCodeWindow(QtWidgets.QWidget):
-    pass
-
 class Controller:
     def __init__(self):
         pass
@@ -76,9 +71,7 @@ class Controller:
         self.func_window = Ui_MainWindow()
         self.main_window.close()
         self.func_window.show()
-
-    def show_code(self):
-        pass
+        self.func_window.button_back.clicked.connect(lambda: {self.func_window.close(), self.main_window.show()})
 
     def show_test(self):
         self.test = TestCapture()
@@ -164,9 +157,11 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.button_show_landmark_code = QtWidgets.QPushButton(u'關鍵點程式')
         self.button_show_expression_code= QtWidgets.QPushButton(u'情緒檢測程式')
 
+        self.button_back = QtWidgets.QPushButton(u"返回主頁")
         # button颜色修改
         button_color = [self.button_open_camera, self.button_close_camera, self.button_open_face, self.button_open_landmark, self.button_show_camera_code, \
                         self.button_show_face_code, self.button_show_landmark_code, self.button_show_expression_code, self.button_open_expression,\
+                        self.button_back
                     ] 
         button_color_count = len(button_color)
         for i in range(button_color_count):
@@ -203,6 +198,7 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.__layout_buttons2.addWidget(self.button_show_face_code)
         self.__layout_buttons2.addWidget(self.button_show_landmark_code)
         self.__layout_buttons2.addWidget(self.button_show_expression_code)
+        self.__layout_buttons2.addWidget(self.button_back)
         # 把button layout添加到main layout上
         self.__layout_main.addLayout(self.__layout_buttons)
         self.__layout_main.addLayout(self.__layout_buttons2)
@@ -213,21 +209,21 @@ class Ui_MainWindow(QtWidgets.QWidget):
         # self.label_move.raise_()      # raise_()把該widget置於最上層
 
     def slot_init(self):
-        # 建立打開攝像頭連接
+        # 打開攝像頭連接
         self.button_open_camera.clicked.connect(lambda: self.button_click(btn_num = 0))
         self.timer_camera.timeout.connect(self.show_camera)
-        # 建立人臉檢測連接
+        # 人臉檢測連接按鈕
         self.button_open_face.clicked.connect(lambda: self.button_click(btn_num = 1))
         self.timer_camera_face.timeout.connect(self.face_detector)
-        # 建立關鍵點檢測連接
+        # 關鍵點檢測連接按鈕
         self.button_open_landmark.clicked.connect(lambda: self.button_click(btn_num = 2))
         self.timer_camera_landmark.timeout.connect(self.face_landmark)       
-        # 建立情緒連接
+        # 情緒連接按鈕
         self.button_open_expression.clicked.connect(lambda: self.button_click(btn_num = 3))
         self.timer_camera_expression.timeout.connect(self.facial_expression)       
-        # 建立關閉程序
+        # 關閉程序按鈕
         self.button_close_camera.clicked.connect(self.close) 
-
+        
         # 點擊打開攝像頭程式
         self.button_show_camera_code.clicked.connect(self.show_camera_code)
         # 點擊打開人臉檢測程式
@@ -383,7 +379,7 @@ class Ui_MainWindow(QtWidgets.QWidget):
     def closeEvent(self, event):
         ok = QtWidgets.QPushButton()
         cancel = QtWidgets.QPushButton()
-        msg = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Warning, u'關閉', u'確定關閉程序？')
+        msg = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Warning, u'關閉', u'確定離開當前頁面？')
         msg.addButton(ok, QtWidgets.QMessageBox.ActionRole)
         msg.addButton(cancel, QtWidgets.QMessageBox.RejectRole)
         ok.setText(u'確定')
@@ -397,25 +393,25 @@ class Ui_MainWindow(QtWidgets.QWidget):
                 self.timer_camera.stop()
             event.accept()
 
-    def show_camera_code(self, checked):
+    def show_camera_code(self):
         if self.window1.isVisible():
             self.window1.hide()
         else:
             self.window1.show()
 
-    def show_facial_code(self, checked):    
+    def show_facial_code(self):    
         if self.window2.isVisible():
             self.window2.hide()
         else:
             self.window2.show() 
         
-    def show_landmark_code(self, checked):
+    def show_landmark_code(self):
         if self.window3.isVisible():
             self.window3.hide()
         else:
             self.window3.show()
 
-    def show_expression_code(self, checked):
+    def show_expression_code(self):
         if self.window4.isVisible():
             self.window4.hide()
         else:
@@ -472,7 +468,7 @@ class TestCapture(QtWidgets.QWidget):
         self.utilities_layout.addWidget(self.button_open_img)
         self.main_layout.addWidget(self.button_back)
         self.setWindowTitle(u'攝像頭捕捉畫面')
-        self.setLayout(self.layout)
+        self.setLayout(self.main_layout)
         
     def slot_init(self):
         # 建立打開攝像頭連接    
