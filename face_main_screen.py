@@ -12,72 +12,57 @@ from tensorflow.keras.utils import img_to_array
 from keras.models import load_model
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+from datetime import date, datetime
 
 class ShowMainWindow(QtWidgets.QWidget):
     switch_window_func = QtCore.pyqtSignal()
+    switch_window_capture = QtCore.pyqtSignal()
     switch_window_code = QtCore.pyqtSignal()
 
     def __init__(self):
         QtWidgets.QWidget.__init__(self)
-        self.setWindowTitle(u'主程式畫面')
-        self.layout_main = QtWidgets.QVBoxLayout()
-        self.button_func_show = QtWidgets.QPushButton(u'進入演示模式')
-        self.button_code_show = QtWidgets.QPushButton(u'進入拍照試玩模式')
-        self.buttons = [self.button_func_show, self.button_code_show]
+        self.setWindowTitle('MyJoyplus')
+        self.layout_main = QVBoxLayout()
+        self.button_func_show = QPushButton('功能展示')
+        self.button_capture_demo = QPushButton('拍照試玩')
+        self.button_code_study = QPushButton("程式學習")
+        self.buttons = [self.button_func_show, self.button_capture_demo, self.button_code_study]
+
         # 設置window的開始位置和尺寸
         self.setGeometry(350, 150, 600, 600)
         # 添加button樣式為expanding自適應
         self.button_adaptive = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        self.button_func_show.setSizePolicy(self.button_adaptive)
-        self.button_code_show.setSizePolicy(self.button_adaptive)
         # 設置button text樣式
         for button in self.buttons:
             button.setFont(QFont('Times', 48))
-        # 設置button樣式
-        for button in self.buttons:
             button.setStyleSheet("QPushButton{color:black}"
                                            "QPushButton:hover{color:red}"
                                            "QPushButton{background-color:rgb(229,255,204)}"
                                            "QpushButton{border:5px}"
                                            "QPushButton{padding:2px 4px}")
+            
+            button.setSizePolicy(self.button_adaptive) 
         # 在layout_main上添加button
         self.layout_main.addWidget(self.button_func_show)
         self.layout_main.addSpacing(10)
-        self.layout_main.addWidget(self.button_code_show)
+        self.layout_main.addWidget(self.button_capture_demo)
+        self.layout_main.addSpacing(10)
+        self.layout_main.addWidget(self.button_code_study)
         # 添加button click事件
         self.button_func_show.clicked.connect(self.switch_func)
-        self.button_code_show.clicked.connect(self.switch_code)
+        self.button_capture_demo.clicked.connect(self.switch_capture)
+        self.button_code_study.clicked.connect(self.switch_code)
         # 應用上面設置的layout
         self.setLayout(self.layout_main)
 
     def switch_func(self):
         self.switch_window_func.emit()
 
+    def switch_capture(self):
+        self.switch_window_capture.emit()
+
     def switch_code(self):
         self.switch_window_code.emit()
-
-class Controller:
-    def __init__(self):
-        pass
-
-    def show_main(self):
-        self.main_window = ShowMainWindow()
-        self.main_window.switch_window_func.connect(self.show_function)
-        # 暫時用code_window測試
-        self.main_window.switch_window_code.connect(self.show_test)
-        self.main_window.show()
-
-    def show_function(self):
-        self.func_window = Ui_MainWindow()
-        self.main_window.close()
-        self.func_window.show()
-        self.func_window.button_back.clicked.connect(lambda: {self.func_window.close(), self.main_window.show()})
-
-    def show_test(self):
-        self.test = TestCapture()
-        self.main_window.close()
-        self.test.show()
-        self.test.button_back.clicked.connect(lambda: {self.test.close(), self.main_window.show()})
 
 
 class AnotherWindow(QWidget):
@@ -163,15 +148,13 @@ class Ui_MainWindow(QtWidgets.QWidget):
                         self.button_show_face_code, self.button_show_landmark_code, self.button_show_expression_code, self.button_open_expression,\
                         self.button_back
                     ] 
-        button_color_count = len(button_color)
-        for i in range(button_color_count):
-            button_color[i].setStyleSheet("QPushButton{color:black}"
+        for button in button_color:
+            button.setStyleSheet("QPushButton{color:black}"
                                            "QPushButton:hover{color:red}"
                                            "QPushButton{background-color:rgb(78,255,255)}"
                                            "QpushButton{border:2px}"
                                            "QPushButton{padding:2px 4px}")
-        # 設置button最小高度
-        for button in button_color:
+            # 設置button最小高度
             button.setMinimumHeight(50)
 
         # move(x, y) --> 移動介面到指定位置。 (0, 0)位於最左上角, 往右和往下為正
@@ -379,7 +362,7 @@ class Ui_MainWindow(QtWidgets.QWidget):
     def closeEvent(self, event):
         ok = QtWidgets.QPushButton()
         cancel = QtWidgets.QPushButton()
-        msg = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Warning, u'關閉', u'確定離開當前頁面？')
+        msg = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Warning, u'關閉', u'確定離開？')
         msg.addButton(ok, QtWidgets.QMessageBox.ActionRole)
         msg.addButton(cancel, QtWidgets.QMessageBox.RejectRole)
         ok.setText(u'確定')
@@ -417,24 +400,148 @@ class Ui_MainWindow(QtWidgets.QWidget):
         else:
             self.window4.show()
 
+class CodeMainWindow(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+        self.window1 = AnotherWindow('codes/camera.png')
+        self.window2 = AnotherWindow('codes/face.png')
+        self.window3 = AnotherWindow('codes/landmark.png')
+        self.window4 = AnotherWindow('codes/expression.png')
+        self.set_ui()
+        self.slot_init()
 
-class TestCapture(QtWidgets.QWidget):
-    def __init__(self, parent=None):
-        super(TestCapture, self).__init__(parent) 
+    def set_ui(self):
+        # self.__layout_main = QVBoxLayout()
+        # self.__layout_buttons = QHBoxLayout()
+        self.grid = QGridLayout()
+
+        self.button_show_camera_code = QPushButton('攝像頭程式')
+        self.button_show_face_code = QPushButton('人臉檢測程式')
+        self.button_show_landmark_code = QPushButton('關鍵點程式')
+        self.button_show_expression_code= QPushButton('情緒檢測程式')
+        self.button_back = QPushButton("先不學習,返回主頁")
+        # self.button_emotion = QPushButton("今日心情")
+
+        # gird格式中按鈕位置
+        self.positions = [(i,j) for i in range(3) for j in range(2)]
+        # button颜色修改
+        self.buttons = [self.button_show_camera_code, self.button_show_face_code, self.button_show_landmark_code,\
+                   self.button_show_expression_code, self.button_back] 
+
+        self.button_adaptive = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        for button in self.buttons:
+            button.setFont(QFont("Times", 30))
+            button.setMinimumHeight(50)
+            button.setStyleSheet(
+                                 "border: 1px black;"
+                                 "background-color : #77b54a;"
+                                 "border-radius: 10px"
+                                 )
+            button.setSizePolicy(self.button_adaptive)
+            # self.__layout_buttons.addWidget(button)
+
+        self.move(350, 150)
+        self.setFixedSize(800, 800)
+
+        # 按鈕用grid格式
+        for position, button in zip(self.positions, self.buttons):
+            self.grid.addWidget(button, *position)
+        
+        # for i in range(3):
+        #     for j in range(2):
+        #         grid = self.grid.getItemPosition((i,j))
+        #         grid.setStyleSheet("background-color : cyan")
+        self.setLayout(self.grid)
+
+        # self.__layout_main.addLayout(self.__layout_buttons)
+        # self.__layout_main.addLayout(self.grid)
+       
+        self.setWindowTitle('齊學習編程')
+        # self.setLayout(self.__layout_main)
+
+    def slot_init(self):      
+        self.button_show_camera_code.clicked.connect(self.show_camera_code)
+        self.button_show_face_code.clicked.connect(self.show_facial_code)
+        self.button_show_landmark_code.clicked.connect(self.show_landmark_code)
+        self.button_show_expression_code.clicked.connect(self.show_expression_code)
+        # self.button_emotion.clicked.connect(self.show_emotion)
+
+    def show_emotion(self):
+        self.emotion = ShowCurrentEmotion()      
+        self.emotion.show()
+
+    def show_camera_code(self):
+        if self.window1.isVisible():
+            self.window1.hide()
+        else:
+            self.window1.show()
+
+    def show_facial_code(self):    
+        if self.window2.isVisible():
+            self.window2.hide()
+        else:
+            self.window2.show() 
+        
+    def show_landmark_code(self):
+        if self.window3.isVisible():
+            self.window3.hide()
+        else:
+            self.window3.show()
+
+    def show_expression_code(self):
+        if self.window4.isVisible():
+            self.window4.hide()
+        else:
+            self.window4.show()
+
+class ShowCurrentEmotion(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+        self.label = QLabel()
+        self.label.setText("您今天過的開心嗎？")
+        self.label.setFont(QFont('Times', 48))
+        self.btn1 = QPushButton("一般")
+        self.btn2 = QPushButton("開心")
+        self.btn3 = QPushButton("有點不開心")
+        self.btn4 = QPushButton("想開心一點")
+        self.buttons = [self.btn1, self.btn2, self.btn3, self.btn4]
+        self.button_adaptive = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        for button in self.buttons:
+            button.setFont(QFont("Times", 30))
+            button.setSizePolicy(self.button_adaptive)
+            button.setStyleSheet("background-color: #2EB2D9")
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.label)
+        self.layout.addSpacing(5)
+        self.layout.addWidget(self.btn1)
+        self.layout.addSpacing(5)
+        self.layout.addWidget(self.btn2)
+        self.layout.addSpacing(5)
+        self.layout.addWidget(self.btn3)
+        self.layout.addSpacing(5)
+        self.layout.addWidget(self.btn4)
+        self.setLayout(self.layout)
+
+
+class ScreenCapture(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__() 
 
         self.timer_camera = QtCore.QTimer()  # 初始化攝像頭定時器
         self.cap = cv2.VideoCapture()  # 初始化攝像頭
         self.set_ui()
         self.slot_init()
         self.show_image = None
+        self.camera_opened = False
 
     def set_ui(self):
         self.main_layout = QVBoxLayout()
         self.utilities_layout = QHBoxLayout()
-        self.button_open_camera = QPushButton(u'攝像頭功能')
-        self.button_cap = QPushButton(u"拍照")
-        self.button_open_img = QPushButton(u"查看照片")
-        self.button_back = QPushButton(u"回到主頁")
+        self.button_open_camera = QPushButton('攝像頭開關')
+        self.button_cap = QPushButton("拍照")
+        self.button_open_img = QPushButton("查看照片")
+        self.button_back = QPushButton("回到主頁")
+
         # button颜色修改
         self.buttons = [self.button_open_camera, self.button_cap, self.button_open_img, self.button_back]
         for button in self.buttons:
@@ -443,76 +550,81 @@ class TestCapture(QtWidgets.QWidget):
                                 "QPushButton{background-color:rgb(78,255,255)}"
                                 "QpushButton{border:2px}"
                                 "QPushButton{padding:2px 4px}")
-        # 設置button最小高度
-        for button in self.buttons:
             button.setMinimumHeight(50)
-        # move(x, y) --> 移動介面到指定位置。 (0, 0)位於最左上角, 往右和往下為正
         self.move(350, 150)
 
-        # 下方顯示攝像頭的panel
         self.show_camera_panel = QtWidgets.QLabel()
-        self.show_camera_panel.setFixedSize(800, 600)    # 整個camera panel的尺寸大小        
- 
-        # setAutoFillBackground要和palette一起用 | palette: 調色板
-        # 這裏用來表示顯示camera panel  
+        self.show_camera_panel.setFixedSize(800, 600)       
+  
         palette = QPalette()
         palette.setColor(QPalette.Window, Qt.black)
         self.show_camera_panel.setPalette(palette)
         self.show_camera_panel.setAutoFillBackground(True)
 
-        # 把button layout添加到main layout上
         self.main_layout.addWidget(self.show_camera_panel)
         self.main_layout.addLayout(self.utilities_layout)
         self.utilities_layout.addWidget(self.button_open_camera)
         self.utilities_layout.addWidget(self.button_cap)
         self.utilities_layout.addWidget(self.button_open_img)
         self.main_layout.addWidget(self.button_back)
-        self.setWindowTitle(u'攝像頭捕捉畫面')
+        self.setWindowTitle('拍照試玩')
         self.setLayout(self.main_layout)
         
     def slot_init(self):
         # 建立打開攝像頭連接    
-        self.button_open_camera.clicked.connect(self.button_click)      
+        self.button_open_camera.clicked.connect(self.open_camera)      
         self.timer_camera.timeout.connect(self.show_camera)
 
         self.button_cap.clicked.connect(self.cap_image)
         self.button_open_img.clicked.connect(self.open_directory)
 
     # 開關攝像頭
-    def button_click(self):
+    def open_camera(self):
         timers = self.timer_camera
         if timers.isActive() == False:
             flag = self.cap.open(0)   # 筆記本電腦的攝像頭通常CAM_NUM = 0
             if flag == False:
-                msg = QtWidgets.QMessageBox.Warning(self, u'注意', u'請檢測外部攝像頭與電腦是否連接正常', buttons=QtWidgets.QMessageBox.Ok,
+                msg = QMessageBox.Warning(self, '注意', '請檢測外部攝像頭與電腦是否連接正常', buttons=QtWidgets.QMessageBox.Ok,
                                                             defaultButton=QtWidgets.QMessageBox.Ok)
             else:
                 # 10代表每10ms觸發一次
+                self.camera_opened = True
                 timers.start(10)
         else:
             timers.stop()
+            self.camera_opened = False
             self.cap.release()
             self.show_camera_panel.clear() 
+    
     # 拍照
     def cap_image(self):
-        self.show_image.save('./captured/photo.png')
-        msg = QMessageBox(QMessageBox.Warning, "提示", '拍照成功')
-        msg.exec_()
-    # 打開照片文件夾
-    def open_directory(self):
-        self.captured = CapturedImageSelect()
-        self.captured.show()
-    # 打開攝像頭
+        if self.camera_opened == False:
+            msg = QMessageBox(QMessageBox.Information, "提示", '未監測到打開攝像頭, 請先打開攝像頭')
+            msg.exec_()
+
+        elif self.camera_opened == True and self.show_image is not None:
+            now = datetime.now()
+            curr = now.strftime("%d-%m-%y-%H-%M-%S")
+            # print(self.show_image, curr)
+            self.show_image.save(f'./captured/photo-{curr}.png')
+            res = QMessageBox(QMessageBox.Warning, "提示", '拍照成功')
+            res.exec()
+    
+    # 把攝像頭捕捉到的放到panel中 
     def show_camera(self):
-        _, self.frame = self.cap.read()     # --> frame: (height, width, channel)
-        show = cv2.resize(self.frame, (800, 600))  # 顯示在camera panel中的圖片大小, 想要的尺寸(width, height)
-         # opencv默認的BGR要轉換成RGB
-        show = cv2.cvtColor(show, cv2.COLOR_BGR2RGB)  # --> (600, 800, 3)
-        # showImage return 一個object.    QtGui.QImage(data, width, height, format)
+        self.camera_opened = True
+        _, frame = self.cap.read()  
+        show = cv2.resize(frame, (800, 600))  
+        show = cv2.cvtColor(show, cv2.COLOR_BGR2RGB)  
         showImage = QtGui.QImage(show.data, show.shape[1], show.shape[0], QtGui.QImage.Format_RGB888)
         self.show_image = showImage
         self.show_camera_panel.setPixmap(QtGui.QPixmap.fromImage(showImage))
 
+
+    # 打開照片文件夾
+    def open_directory(self):
+        self.captured = CapturedImageSelect()
+        self.captured.show()
 
 class CapturedImageSelect(QtWidgets.QWidget):
     def __init__(self):
@@ -551,14 +663,18 @@ class CapturedImageSelect(QtWidgets.QWidget):
 
     def open_image(self):
         fname, _ = QFileDialog.getOpenFileName(self, '打開文件夾', './captured', "Image files (*.jpg *.png)")
-        self.img = cv2.imread(fname)
-        self.img = cv2.resize(self.img, (500, 500))
-        self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
-        showImage = QtGui.QImage(self.img.data, self.img.shape[1], self.img.shape[0], QtGui.QImage.Format_RGB888)
-        self.panel.setPixmap(QtGui.QPixmap.fromImage(showImage))
-        self.facial_expression(fname)
+        if fname:
+            self.img = cv2.imread(fname)
+            self.img = cv2.resize(self.img, (500, 500))
+            self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
+            showImage = QtGui.QImage(self.img.data, self.img.shape[1], self.img.shape[0], QtGui.QImage.Format_RGB888)
+            self.panel.setPixmap(QtGui.QPixmap.fromImage(showImage))
+            self.facial_expression(fname)
 
     def facial_expression(self, filename = None): 
+        now = datetime.now()
+        curr = now.strftime("%d-%m-%y-%H-%M-%S")
+        
         self.frame = cv2.imread(filename)
         show = cv2.resize(self.frame, (500, 500))
         show_rgb = cv2.cvtColor(show, cv2.COLOR_BGR2RGB)
@@ -610,10 +726,73 @@ class CapturedImageSelect(QtWidgets.QWidget):
                 show_rgb[Y:(Y+100), emoji_start:emoji_end, c] = (alpha_emoji * emoji_image[:, :, c] + alpha_show_rgb * show_rgb[Y:(Y+100), emoji_start:emoji_end, c])
             
             showImage = QtGui.QImage(show_rgb.data, show_rgb.shape[1], show_rgb.shape[0], QtGui.QImage.Format_RGB888)
+            self.panel.clear()
             self.panel.setPixmap(QtGui.QPixmap.fromImage(showImage)) 
             showImage.save('./captured/photo_expression.png')
 
 
+# 詢問使用者是否開心
+class ShowGreeting(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+        self.layout = QVBoxLayout()
+        self.label = QLabel("My Joy+ 希望你過得開心快樂☺️")
+        self.label2 = QLabel("想測試記憶力 可以找我們玩☺️")
+        self.btn = QPushButton("確定")
+        self.layout.addWidget(self.label)
+        self.layout.addWidget(self.label2)
+        self.layout.addWidget(self.btn) 
+        self.button_adaptive = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.btn.setFont(QFont("Times", 30))
+        self.label.setFont(QFont("Times", 50))
+        self.label2.setFont(QFont("Times", 50))
+        self.btn.setSizePolicy(self.button_adaptive)
+        self.btn.setStyleSheet("background-color : #92C46E;"
+                                 "border-radius: 8px;")
+        self.setLayout(self.layout)
+
+class Controller:
+    def __init__(self):
+        pass
+
+    def show_main(self):
+        # 應用首頁，顯示3個主要功能
+        self.main_window = ShowMainWindow()
+        self.main_window.switch_window_func.connect(self.show_function)     # 跳轉功能頁面
+        self.main_window.switch_window_capture.connect(self.show_capture)   # 跳轉截屏顯示表情頁面
+        self.main_window.switch_window_code.connect(self.show_code)         # 跳轉學習程式頁面
+        self.main_window.show()
+        # self.main_window.button_back_greeting.clicked.connect(lambda: {self.main_window.close(), self.greeting_window.show()})
+
+    def show_function(self):
+        self.func_window = Ui_MainWindow()
+        self.main_window.close()
+        self.func_window.show()
+        self.func_window.button_back.clicked.connect(lambda: {self.func_window.close(), self.main_window.show()})
+
+    def show_capture(self):
+        self.capture = ScreenCapture()
+        self.main_window.close()
+        self.capture.show()
+        self.capture.button_back.clicked.connect(lambda: {self.capture.close(), self.main_window.show()})
+
+    def show_code(self):
+        self.code = CodeMainWindow()
+        self.emotion = ShowCurrentEmotion()
+        self.greeting = ShowGreeting()
+
+        self.main_window.close()
+        self.code.show()
+
+        self.code.button_back.clicked.connect(lambda: self.emotion.show())
+
+        for button in self.emotion.buttons:
+            button.clicked.connect(lambda: self.greeting.show())
+        
+        self.greeting.btn.clicked.connect(lambda: {self.code.close(), self.greeting.close(), self.emotion.close(), 
+                                                   self.main_window.show()})
+        # self.main_window.close()
+        # self.code.show()
 
 if __name__ == '__main__':
     App = QApplication(sys.argv)
