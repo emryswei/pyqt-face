@@ -23,12 +23,14 @@ class ShowMainWindow(QtWidgets.QWidget):
     def __init__(self):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('MyJoyplus')
+        self.layout_logo = QHBoxLayout()
         self.layout_main = QVBoxLayout()
         self.button_func_show = QPushButton('功能展示')
         self.button_capture_demo = QPushButton('拍照試玩')
         self.button_code_study = QPushButton("程式學習")
         self.buttons = [self.button_func_show, self.button_capture_demo, self.button_code_study]
-
+        self.logo = QLabel("MYJOYPLUS_LOGO")
+        self.logo.setStyleSheet("border: 2px solid black;")
         # 設置window的開始位置和尺寸
         self.setGeometry(350, 150, 600, 600)
         # 添加button樣式為expanding自適應
@@ -43,6 +45,8 @@ class ShowMainWindow(QtWidgets.QWidget):
                                            "QPushButton{padding:2px 4px}")
             
             button.setSizePolicy(self.button_adaptive) 
+        
+        self.layout_logo.addWidget(self.logo)
         # 在layout_main上添加button
         self.layout_main.addWidget(self.button_func_show)
         self.layout_main.addSpacing(10)
@@ -54,7 +58,8 @@ class ShowMainWindow(QtWidgets.QWidget):
         self.button_capture_demo.clicked.connect(self.switch_capture)
         self.button_code_study.clicked.connect(self.switch_code)
         # 應用上面設置的layout
-        self.setLayout(self.layout_main)
+        self.layout_logo.addLayout(self.layout_main)
+        self.setLayout(self.layout_logo)
 
     def switch_func(self):
         self.switch_window_func.emit()
@@ -107,16 +112,11 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.predictor = dlib.shape_predictor('./shape_predictor_68_face_landmarks.dat')
         self.net = cv2.dnn.readNetFromCaffe("deploy.prototxt", "res10_300x300_ssd_iter_140000.caffemodel")
 
-        # 情緒檢測器
+        # # 情緒檢測器
         self.expression_detector = cv2.CascadeClassifier('./haarcascade_frontalface_alt2.xml')
         self.expression_model = load_model('epoch_30.hdf5')
         self.EMOTIONS = ["生氣", "驚嚇", "開心", "傷心", "驚訝", "普通"]
         self.EMOJI = ['emojis/angry_emoji.png', 'emojis/scared_emoji.png', 'emojis/happy_emoji.png', 'emojis/sad_emoji.png', 'emojis/surprised_emoji.png', 'emojis/neutral_emoji.png']
-        self.window1 = AnotherWindow('codes/camera.png')
-        self.window2 = AnotherWindow('codes/face.png')
-        self.window3 = AnotherWindow('codes/landmark.png')
-        self.window4 = AnotherWindow('codes/expression.png')
-
 
     def set_ui(self):
         '''
@@ -128,26 +128,19 @@ class Ui_MainWindow(QtWidgets.QWidget):
         # self.__layout_main = QtWidgets.QHBoxLayout()  # QHBoxLayout水平佈局，按照從左到右的順序排列
         # self.__layout_buttons = QtWidgets.QHBoxLayout()
         # main vertical layout
-        self.__layout_main = QtWidgets.QVBoxLayout()
-        self.__layout_buttons = QtWidgets.QHBoxLayout()
-        self.__layout_buttons2 = QtWidgets.QHBoxLayout()
+        self.__layout_main = QVBoxLayout()
+        self.__layout_buttons = QHBoxLayout()
+        self.__layout_buttons2 = QHBoxLayout()
 
-        self.button_open_camera = QtWidgets.QPushButton(u'打開攝像頭')
-        self.button_open_face = QtWidgets.QPushButton(u'打開人臉檢測')
-        self.button_open_landmark = QtWidgets.QPushButton(u'打開人臉關鍵點檢測')
-        self.button_open_expression = QtWidgets.QPushButton(u'打開人臉情緒檢測')
-        self.button_close_camera = QtWidgets.QPushButton(u'關閉程序')
+        self.button_open_camera = QPushButton('打開攝像頭')
+        self.button_open_face = QPushButton('打開人臉檢測')
+        self.button_open_landmark = QPushButton('打開人臉關鍵點檢測')
+        self.button_open_expression = QPushButton('打開人臉情緒檢測')
+        self.button_close_camera = QPushButton('關閉程序')
 
-        self.button_show_camera_code = QtWidgets.QPushButton(u'攝像頭程式')
-        self.button_show_face_code = QtWidgets.QPushButton(u'人臉檢測程式')
-        self.button_show_landmark_code = QtWidgets.QPushButton(u'關鍵點程式')
-        self.button_show_expression_code= QtWidgets.QPushButton(u'情緒檢測程式')
-
-        self.button_back = QtWidgets.QPushButton(u"返回主頁")
+        self.button_back = QPushButton("返回主頁")
         # button颜色修改
-        button_color = [self.button_open_camera, self.button_close_camera, self.button_open_face, self.button_open_landmark, self.button_show_camera_code, \
-                        self.button_show_face_code, self.button_show_landmark_code, self.button_show_expression_code, self.button_open_expression,\
-                        self.button_back
+        button_color = [self.button_open_camera, self.button_close_camera, self.button_open_face, self.button_open_landmark, self.button_open_expression, self.button_back
                     ] 
         for button in button_color:
             button.setStyleSheet("QPushButton{color:black}"
@@ -177,11 +170,7 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.__layout_buttons.addWidget(self.button_open_landmark)
         self.__layout_buttons.addWidget(self.button_open_expression)
         self.__layout_buttons.addWidget(self.button_close_camera)
-        # 第二行button添加到第二行的button layout 中
-        self.__layout_buttons2.addWidget(self.button_show_camera_code)
-        self.__layout_buttons2.addWidget(self.button_show_face_code)
-        self.__layout_buttons2.addWidget(self.button_show_landmark_code)
-        self.__layout_buttons2.addWidget(self.button_show_expression_code)
+
         self.__layout_buttons2.addWidget(self.button_back)
         # 把button layout添加到main layout上
         self.__layout_main.addLayout(self.__layout_buttons)
@@ -190,7 +179,6 @@ class Ui_MainWindow(QtWidgets.QWidget):
        
         self.setWindowTitle(u'主程序畫面')
         self.setLayout(self.__layout_main)
-        # self.label_move.raise_()      # raise_()把該widget置於最上層
 
     def slot_init(self):
         # 打開攝像頭連接
@@ -207,15 +195,6 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.timer_camera_expression.timeout.connect(self.facial_expression)       
         # 關閉程序按鈕
         self.button_close_camera.clicked.connect(self.close) 
-        
-        # 點擊打開攝像頭程式
-        self.button_show_camera_code.clicked.connect(self.show_camera_code)
-        # 點擊打開人臉檢測程式
-        self.button_show_face_code.clicked.connect(self.show_facial_code)
-        # 點擊打開人臉關鍵點檢測程式
-        self.button_show_landmark_code.clicked.connect(self.show_landmark_code)
-        # 點擊打開人臉情緒檢測程式 
-        self.button_show_expression_code.clicked.connect(self.show_expression_code)
     
     def button_click(self, btn_num):
         click_buttons = [self.button_open_camera, self.button_open_face, self.button_open_landmark, self.button_open_expression]
@@ -294,9 +273,6 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.show_camera_panel.setPixmap(QtGui.QPixmap.fromImage(showImage)) 
 
     def facial_expression(self): 
-        now = datetime.now()
-        curr = now.strftime("%d-%m-%y-%H-%M-%S")
-
         _, self.frame = self.cap.read()
         show = cv2.resize(self.frame, (800, 600))
         show_rgb = cv2.cvtColor(show, cv2.COLOR_BGR2RGB)
@@ -361,7 +337,6 @@ class Ui_MainWindow(QtWidgets.QWidget):
             
             showImage = QtGui.QImage(show_rgb.data, show_rgb.shape[1], show_rgb.shape[0], QtGui.QImage.Format_RGB888)
             self.show_camera_panel.setPixmap(QtGui.QPixmap.fromImage(showImage)) 
-            showImage.save(f'./captured/photo_expression_{curr}.png')
             
     def closeEvent(self, event):
         ok = QtWidgets.QPushButton()
@@ -379,30 +354,6 @@ class Ui_MainWindow(QtWidgets.QWidget):
             if self.timer_camera.isActive():
                 self.timer_camera.stop()
             event.accept()
-
-    def show_camera_code(self):
-        if self.window1.isVisible():
-            self.window1.hide()
-        else:
-            self.window1.show()
-
-    def show_facial_code(self):    
-        if self.window2.isVisible():
-            self.window2.hide()
-        else:
-            self.window2.show() 
-        
-    def show_landmark_code(self):
-        if self.window3.isVisible():
-            self.window3.hide()
-        else:
-            self.window3.show()
-
-    def show_expression_code(self):
-        if self.window4.isVisible():
-            self.window4.hide()
-        else:
-            self.window4.show()
 
 class CodeMainWindow(QtWidgets.QWidget):
     def __init__(self):
@@ -450,25 +401,15 @@ class CodeMainWindow(QtWidgets.QWidget):
         # 按鈕用grid格式
         for position, button in zip(self.positions, self.buttons):
             self.grid.addWidget(button, *position)
-        
-        # for i in range(3):
-        #     for j in range(2):
-        #         grid = self.grid.getItemPosition((i,j))
-        #         grid.setStyleSheet("background-color : cyan")
-        self.setLayout(self.grid)
 
-        # self.__layout_main.addLayout(self.__layout_buttons)
-        # self.__layout_main.addLayout(self.grid)
-       
+        self.setLayout(self.grid)       
         self.setWindowTitle('齊學習編程')
-        # self.setLayout(self.__layout_main)
 
     def slot_init(self):      
         self.button_show_camera_code.clicked.connect(self.show_camera_code)
         self.button_show_face_code.clicked.connect(self.show_facial_code)
         self.button_show_landmark_code.clicked.connect(self.show_landmark_code)
         self.button_show_expression_code.clicked.connect(self.show_expression_code)
-        # self.button_emotion.clicked.connect(self.show_emotion)
 
     def show_emotion(self):
         self.emotion = ShowCurrentEmotion()      
@@ -615,7 +556,9 @@ class ScreenCapture(QtWidgets.QWidget):
             self.show_image.save(image_name)
             
             # self.expression(filename = image_name)
-            self.expression_detection.facial_expression(image_name)
+            show_rgb = self.expression_detection.facial_expression(image_name)
+            showImage = QtGui.QImage(show_rgb.data, show_rgb.shape[1], show_rgb.shape[0], QtGui.QImage.Format_RGB888)
+            showImage.save(f'./captured/expressions/photo_expression_{curr}.png')
             res = QMessageBox(QMessageBox.Warning, "提示", '拍照成功')
             res.exec()
 

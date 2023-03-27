@@ -17,7 +17,7 @@ class FacialRecognition:
         self.expression_model = load_model('epoch_30.hdf5')
         self.EMOTIONS = ["生氣", "驚嚇", "開心", "傷心", "驚訝", "普通"]
         self.EMOJI = ['emojis/angry_emoji.png', 'emojis/scared_emoji.png', 'emojis/happy_emoji.png', 'emojis/sad_emoji.png', 'emojis/surprised_emoji.png', 'emojis/neutral_emoji.png']
-        
+
     def facial_expression(self, filename = None): 
         now = datetime.now()
         curr = now.strftime("%d-%m-%y-%H-%M-%S")
@@ -72,5 +72,7 @@ class FacialRecognition:
             for c in range(0, 3):
                 show_rgb[Y:(Y+100), emoji_start:emoji_end, c] = (alpha_emoji * emoji_image[:, :, c] + alpha_show_rgb * show_rgb[Y:(Y+100), emoji_start:emoji_end, c])
             
+            return show_rgb
+        
             showImage = QtGui.QImage(show_rgb.data, show_rgb.shape[1], show_rgb.shape[0], QtGui.QImage.Format_RGB888)
             showImage.save(f'./captured/expressions/photo_expression_{curr}.png')
